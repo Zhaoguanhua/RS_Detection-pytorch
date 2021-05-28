@@ -13,6 +13,7 @@ import torch.utils.data
 import cv2
 import json
 import numpy as np
+from pycocotools.coco import COCO
 from pycocotools import mask as coco_mask
 from utils_tool import transforms as T
 from PIL import Image
@@ -140,6 +141,63 @@ class BuildingDataset(torch.utils.data.Dataset):
     def __len__(self):
         return len(self.images_name)
 
+class CrowAiBuildingDataset(torch.utils.data.Dataset):
+
+    def __init__(self,images_dir,annotation_file,transforms=None):
+        self.images_dir=images_dir
+        self.annotation_file=annotation_file
+        self.transform=transforms
+        self.coco=COCO(self.annotation_file)
+        self.class_Ids=self.coco.getCatIds()
+        self.image_ids=self.coco.getImgIds()
+
+    def __getitem__(self, i):
+
+
+        annos = self.coco.getAnnIds(imgIds=[self.image_ids[i]], catIds=self.class_Ids, iscrowd=None)
+        anns = self.coco.loadAnns(annos)
+
+        img_name= self.coco.imgs[self.image_ids[i]]['file_name']
+        image=cv2.imread(os.path.join(self.images_dir,img_name))
+        image=cv2.cvtColor(image,cv2.COLOR_BGR2RGB)
+
+        boxes=[]
+        labels=[]
+        masks=[]
+
+        for ann in anns:
+
+            mask=self.coco.annToMask(ann)
+            box=ann["bbox"]
+            category_id=1
+            boxes.append(box)
+            labels.append(category_id)
+            masks.append(mask)
+
+        image_id=torch.tensor([i])
+        iscrowd=torch.zeros((len(annos),),dtype=torch.int64)
+        #
+        # print(boxes)
+        boxes=torch.as_tensor(boxes,dtype=torch.float32)
+
+        labels=torch.as_tensor(labels,dtype=torch.int64)
+        masks=torch.as_tensor(masks,dtype=torch.uint8)
+
+        target={}
+        target["boxes"]=boxes
+        target["labels"]=labels
+        target["masks"]=masks
+        target["image_id"]=image_id
+        target["iscrowd"]=iscrowd
+
+        if  self.transform is not None:
+            image,target=self.transform(image,target)
+
+        return image,target
+
+    def __len__(self):
+        return len(self.coco.getImgIds())
+
 
 def get_transform(train):
     transforms=[]
@@ -150,3 +208,58 @@ def get_transform(train):
 
     return T.Compose(transforms)
 
+if __name__ == '__main__':
+    image_dir=r"D:\test_data\aicrowd_building\val\images"
+    anno_json_file=r"D:\test_data\aicrowd_building\val\annotation-small.json"
+
+    ai_dataset=CrowAiBuildingDataset(images_dir=image_dir,annotation_file=anno_json_file)
+    print(len(ai_dataset))
+    # print(ai_dataset.class_Ids)
+    data=ai_dataset[0]
+    print(data)
+    # # with open(anno_json_file) as f:
+    # #     labels_json = json.load(f)
+    # #     print(type(labels_json))
+    # #
+    # #     for i in labels_json:
+    # #         print(i)
+    # #         # print(labels_json[i])
+    # #
+    # #     # for j in labels_json["images"]:
+    # #     #     print(j)
+    # #
+    # #     for k in labels_json["annotations"]:
+    # #         print(k)
+    # coco=COCO(anno_json_file)
+    #
+    # image_ids=coco.getImgIds()
+    # # # print(class_Ids)
+    # # # print(image_ids)
+    # print(len(image_ids))
+    #
+    # import shutil
+    # small_dir=r"D:\test_data\train\image"
+    # for i in image_ids:
+    #     path=os.path.join(image_dir,coco.imgs[i]['file_name'])
+    #     small_path=os.path.join(small_dir,coco.imgs[i]['file_name'])
+    #     # print(path)
+    #     shutil.copy(path,small_path)
+    # annos=coco.getAnnIds(imgIds=[0],catIds=class_Ids,iscrowd=None)
+    # # print(annos[0])
+    # anns=coco.loadAnns(annos)
+    # # coco.showAnns(ann)
+    # # print(ann)
+    # # mask=coco.annToMask(ann)
+    # # print(mask)
+    # id=0
+    # for ann in anns:
+    #     print(ann)
+    #     print(ann['bbox'])
+    #     # rle=coco.annToRLE(ann)
+    #     # print(rle)
+    #     # mask=coco_mask.decode(rle)
+    #     mask=coco.annToMask(ann)
+    #     print(mask.shape)
+    #     id+=1
+    #     img_path=str(id)+".PNG"
+    #     cv2.imwrite(img_path,mask)

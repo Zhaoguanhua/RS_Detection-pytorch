@@ -12,25 +12,21 @@ sys.path.append("..")
 import torch
 from utils_tool import utils
 from torch.utils.data import DataLoader
-from dataset import PennFudanDataset, get_transform
+from dataset import PennFudanDataset, get_transform,CrowAiBuildingDataset
 from instance_detection.model import get_instance_segmentation_model
 from utils_tool.engine import train_one_epoch,evaluate
 
-# root dir
+# # root dir
 root_dir = r"D:\project\Python\Mask_RCNN_Pytorch\PennFudanPed"
+#
 
-# data_train = os.path.join(root_dir, "")
-# data_valid = os.path.join(root_dir, "")
+data_train = os.path.join(root_dir, "train")
+data_valid = os.path.join(root_dir, "val")
 
-# define dataset
-dataset_train = PennFudanDataset(root_dir, get_transform(train=True))
-dataset_valid = PennFudanDataset(root_dir, get_transform(train=False))
-
-#split the dataset in train and validation set
-torch.manual_seed(1)
-indices=torch.randperm(len(dataset_train)).tolist()
-dataset_train=torch.utils.data.Subset(dataset_train,indices[:-50])
-dataset_valid=torch.utils.data.Subset(dataset_valid,indices[-50:])
+dataset_train=CrowAiBuildingDataset(os.path.join(data_train,"images"),os.path.join(data_train,"annotation-small.json"),
+                                    transforms=get_transform(train=True))
+dataset_valid=CrowAiBuildingDataset(os.path.join(data_valid,"images"),os.path.join(data_valid,"annotation-small.json"),
+                                    transforms=get_transform(train=False))
 
 # define dataloader
 dataloader_train = DataLoader(dataset_train,batch_size=2,shuffle=True,num_workers=0,collate_fn=utils.collate_fn)
