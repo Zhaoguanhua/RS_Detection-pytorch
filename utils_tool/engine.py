@@ -11,9 +11,7 @@ from . import utils
 
 
 def train_one_epoch(model, optimizer, data_loader, device, epoch, print_freq):
-    print('start train')
     model.train()
-    print('end train')
     metric_logger = utils.MetricLogger(delimiter="  ")
     metric_logger.add_meter('lr', utils.SmoothedValue(window_size=1, fmt='{value:.6f}'))
     header = 'Epoch: [{}]'.format(epoch)

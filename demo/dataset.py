@@ -17,6 +17,7 @@ from pycocotools.coco import COCO
 from pycocotools import mask as coco_mask
 from utils_tool import transforms as T
 from PIL import Image
+import matplotlib.pyplot as plt
 
 class PennFudanDataset(torch.utils.data.Dataset):
     def __init__(self, root, transforms=None):
@@ -168,11 +169,22 @@ class CrowAiBuildingDataset(torch.utils.data.Dataset):
         for ann in anns:
 
             mask=self.coco.annToMask(ann)
-            box=ann["bbox"]
+            seg=ann["segmentation"]
+
+            x_points=seg[0][::2]
+            y_points=seg[0][1::2]
+            x11=min(x_points)
+            x22=max(x_points)
+            y11=min(y_points)
+            y22=max(y_points)
+
             category_id=1
-            boxes.append(box)
-            labels.append(category_id)
-            masks.append(mask)
+
+            if x11!=x22 and y11!=y22:
+                bbox=[x11,y11,x22,y22]
+                boxes.append(bbox)
+                labels.append(category_id)
+                masks.append(mask)
 
         image_id=torch.tensor([i])
         iscrowd=torch.zeros((len(annos),),dtype=torch.int64)
@@ -183,12 +195,14 @@ class CrowAiBuildingDataset(torch.utils.data.Dataset):
         labels=torch.as_tensor(labels,dtype=torch.int64)
         masks=torch.as_tensor(masks,dtype=torch.uint8)
 
+        area = (boxes[:, 3] - boxes[:, 1]) * (boxes[:, 2] - boxes[:, 0])
         target={}
         target["boxes"]=boxes
         target["labels"]=labels
         target["masks"]=masks
         target["image_id"]=image_id
         target["iscrowd"]=iscrowd
+        target["area"] = area
 
         if  self.transform is not None:
             image,target=self.transform(image,target)
@@ -209,14 +223,22 @@ def get_transform(train):
     return T.Compose(transforms)
 
 if __name__ == '__main__':
+
+    # image_dir=r"D:\test_data\aicrowd_building\train\images"
+    # anno_json_file=r"D:\test_data\aicrowd_building\train\annotation-small.json"
+
     image_dir=r"D:\test_data\aicrowd_building\val\images"
     anno_json_file=r"D:\test_data\aicrowd_building\val\annotation-small.json"
-
-    ai_dataset=CrowAiBuildingDataset(images_dir=image_dir,annotation_file=anno_json_file)
+    #
+    ai_dataset=CrowAiBuildingDataset(images_dir=image_dir,annotation_file=anno_json_file,
+                                     transforms=get_transform(train=True))
     print(len(ai_dataset))
-    # print(ai_dataset.class_Ids)
-    data=ai_dataset[0]
-    print(data)
+    for i in range(len(ai_dataset)):
+        print(i)
+        img,target=ai_dataset[i]
+    # # print(ai_dataset.class_Ids)
+    # data=ai_dataset[0]
+    # print(data)
     # # with open(anno_json_file) as f:
     # #     labels_json = json.load(f)
     # #     print(type(labels_json))
@@ -231,35 +253,57 @@ if __name__ == '__main__':
     # #     for k in labels_json["annotations"]:
     # #         print(k)
     # coco=COCO(anno_json_file)
-    #
+    # #
     # image_ids=coco.getImgIds()
-    # # # print(class_Ids)
-    # # # print(image_ids)
-    # print(len(image_ids))
-    #
-    # import shutil
-    # small_dir=r"D:\test_data\train\image"
+    # class_Ids=coco.getCatIds()
+    # # # # print(class_Ids)
+    # print(image_ids)
+    # # print(len(image_ids))
+    # #
+    # # import shutil
+    # # small_dir=r"D:\test_data\train\image"
     # for i in image_ids:
     #     path=os.path.join(image_dir,coco.imgs[i]['file_name'])
-    #     small_path=os.path.join(small_dir,coco.imgs[i]['file_name'])
+    #     img_array=cv2.imread(path)
+    #     # small_path=os.path.join(small_dir,coco.imgs[i]['file_name'])
     #     # print(path)
-    #     shutil.copy(path,small_path)
-    # annos=coco.getAnnIds(imgIds=[0],catIds=class_Ids,iscrowd=None)
-    # # print(annos[0])
-    # anns=coco.loadAnns(annos)
-    # # coco.showAnns(ann)
-    # # print(ann)
-    # # mask=coco.annToMask(ann)
-    # # print(mask)
-    # id=0
-    # for ann in anns:
-    #     print(ann)
-    #     print(ann['bbox'])
-    #     # rle=coco.annToRLE(ann)
-    #     # print(rle)
-    #     # mask=coco_mask.decode(rle)
-    #     mask=coco.annToMask(ann)
-    #     print(mask.shape)
-    #     id+=1
-    #     img_path=str(id)+".PNG"
-    #     cv2.imwrite(img_path,mask)
+    #     # shutil.copy(path,small_path)
+    #     annos=coco.getAnnIds(imgIds=[i],catIds=class_Ids,iscrowd=None)
+    #     # print(annos[0])
+    #     anns=coco.loadAnns(annos)
+    #     # coco.showAnns(ann)
+    #     # print(ann)
+    #     # mask=coco.annToMask(ann)
+    #     # print(mask)
+    #     id=0
+    #     for ann in anns:
+    #         temp_path=str(id)+".PNG"
+    #         seg=ann["segmentation"]
+    #         bbox=ann["bbox"]
+    #
+    #         mask=coco.annToMask(ann)
+    #         # id+=1
+    #         x_points=seg[0][::2]
+    #         y_points=seg[0][1::2]
+    #         x11=min(x_points)
+    #         x22=max(x_points)
+    #         y11=min(y_points)
+    #         y22=max(y_points)
+    #
+    #         if x11==x22 or y11==y22:
+    #             print((x11, y11, x22, y22))
+    #             cv2.rectangle(img_array,(x11,y11),(x22,y22),(0,255,0),2)
+    #             plt.imshow(img_array)
+    #             plt.show()
+            # x1=bbox[1]
+            # x2=bbox[1]+bbox[3]
+            # y1=bbox[0]
+            # y2=bbox[0]+bbox[2]
+            # print((x1,y1,x2,y2))
+            # cv2.rectangle(img_array,(x1,y1),(x2,y2),(0,255,0),2)
+            # cv2.imwrite(temp_path,img_array)
+
+        # plt.imshow(img_array)
+        # coco.showAnns(anns)
+        # plt.show()
+        # break

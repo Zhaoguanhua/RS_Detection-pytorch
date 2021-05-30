@@ -17,20 +17,25 @@ from instance_detection.model import get_instance_segmentation_model
 from utils_tool.engine import train_one_epoch,evaluate
 
 # # root dir
-root_dir = r"D:\project\Python\Mask_RCNN_Pytorch\PennFudanPed"
+root_dir = r"D:\test_data\aicrowd_building"
 #
 
-data_train = os.path.join(root_dir, "train")
+# data_train = os.path.join(root_dir, "train")
 data_valid = os.path.join(root_dir, "val")
 
-dataset_train=CrowAiBuildingDataset(os.path.join(data_train,"images"),os.path.join(data_train,"annotation-small.json"),
+dataset_train=CrowAiBuildingDataset(os.path.join(data_valid,"images"),os.path.join(data_valid,"annotation-small.json"),
                                     transforms=get_transform(train=True))
 dataset_valid=CrowAiBuildingDataset(os.path.join(data_valid,"images"),os.path.join(data_valid,"annotation-small.json"),
                                     transforms=get_transform(train=False))
 
+torch.manual_seed(1)
+indices=torch.randperm(len(dataset_train)).tolist()
+dataset_train=torch.utils.data.Subset(dataset_train,indices[:-50])
+dataset_valid=torch.utils.data.Subset(dataset_valid,indices[-50:])
+
 # define dataloader
 dataloader_train = DataLoader(dataset_train,batch_size=2,shuffle=True,num_workers=0,collate_fn=utils.collate_fn)
-dataloader_valid=DataLoader(dataset_valid,batch_size=1,shuffle=False,num_workers=0,collate_fn=utils.collate_fn)
+dataloader_valid=DataLoader(dataset_valid,batch_size=2,shuffle=False,num_workers=0,collate_fn=utils.collate_fn)
 
 device=torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
 
@@ -59,7 +64,7 @@ for epoch in range(num_epoches):
 
     # if min_score > valid_logs[loss_name]:
     #     min_score = valid_logs[loss_name]
-    torch.save(model.state_dict(), 'unet_building_epoch{}.pth'.format(epoch))
+    torch.save(model.state_dict(), 'maskrcnn_building_epoch{}.pth'.format(epoch))
     # print('Model saved at epoch {}!'.format())
 
     # if i%20==0:
