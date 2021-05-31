@@ -13,7 +13,8 @@ import torch
 from utils_tool import utils
 from torch.utils.data import DataLoader
 from dataset import PennFudanDataset, get_transform,CrowAiBuildingDataset
-from instance_detection.model import get_instance_segmentation_model
+# from instance_detection.model import get_instance_segmentation_model
+from instance_detection.maskrcnn_pointrend import maskrcnn_resnet_fpn
 from utils_tool.engine import train_one_epoch,evaluate
 
 # # root dir
@@ -41,36 +42,38 @@ device=torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu'
 
 num_classes=2
 
-#model
-model=get_instance_segmentation_model(num_classes=num_classes)
+#mask rcnn
+# model=get_instance_segmentation_model(num_classes=num_classes)
+#mask rcnn with pointrend'
+model =maskrcnn_resnet_fpn(num_classes=num_classes,backbone_name='resnet50')
 
 print(model)
 
-#move model to the right device
-model.to(device)
-
-#construct an optimizer
-params=[p for p in model.parameters() if p.requires_grad]
-optimizer=torch.optim.SGD(params,lr=0.005,momentum=0.9,weight_decay=0.0005)
-#add a learning rate scheduler which decreases the learning rate by 10x every 3 epoches
-lr_scheduler=torch.optim.lr_scheduler.StepLR(optimizer,step_size=3,gamma=0.1)
-
-#train model
-num_epoches=10
-
-for epoch in range(num_epoches):
-    #train for one epoch,printing every 10 iterations
-    train_one_epoch(model,optimizer,dataloader_train,device,epoch,print_freq=1)
-
-    # if min_score > valid_logs[loss_name]:
-    #     min_score = valid_logs[loss_name]
-    torch.save(model.state_dict(), 'maskrcnn_building_epoch{}.pth'.format(epoch))
-    # print('Model saved at epoch {}!'.format())
-
-    # if i%20==0:
-    #     torch.save(model.state_dict(),ENCODER+'_unet_building_'+str(i)+'.pth')
-
-    #update the learning rate
-    lr_scheduler.step()
-    #evaluate on the validation dataset
-    evaluate(model,dataloader_valid,device=device)
+# #move model to the right device
+# model.to(device)
+#
+# #construct an optimizer
+# params=[p for p in model.parameters() if p.requires_grad]
+# optimizer=torch.optim.SGD(params,lr=0.005,momentum=0.9,weight_decay=0.0005)
+# #add a learning rate scheduler which decreases the learning rate by 10x every 3 epoches
+# lr_scheduler=torch.optim.lr_scheduler.StepLR(optimizer,step_size=3,gamma=0.1)
+#
+# #train model
+# num_epoches=10
+#
+# for epoch in range(num_epoches):
+#     #train for one epoch,printing every 10 iterations
+#     train_one_epoch(model,optimizer,dataloader_train,device,epoch,print_freq=1)
+#
+#     # if min_score > valid_logs[loss_name]:
+#     #     min_score = valid_logs[loss_name]
+#     torch.save(model.state_dict(), 'maskrcnn_building_epoch{}.pth'.format(epoch))
+#     # print('Model saved at epoch {}!'.format())
+#
+#     # if i%20==0:
+#     #     torch.save(model.state_dict(),ENCODER+'_unet_building_'+str(i)+'.pth')
+#
+#     #update the learning rate
+#     lr_scheduler.step()
+#     #evaluate on the validation dataset
+#     evaluate(model,dataloader_valid,device=device)
