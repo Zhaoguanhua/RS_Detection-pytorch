@@ -114,23 +114,27 @@ def inference(input_path,output_path,model):
         img2 = img2.astype("float64")
 
         for res_id in res:
-            masks = res_id["masks"].round().cpu().numpy().astype("uint8")
+            if "masks" in res_id:
+                masks = res_id["masks"].round().cpu().numpy().astype("uint8")
             boxes = res_id["boxes"]
             for i in range(res_id["boxes"].shape[0]):
                 if res_id["scores"][i] > 0.8:
                     color = random_color(rgb=True)
                     x1, y1, x2, y2 = boxes[i]
                     # 提取边界
-                    contours, hierarchy = cv2.findContours(masks[i, 0, :, :],
-                                                           cv2.RETR_CCOMP,
-                                                           cv2.CHAIN_APPROX_NONE)
-                    zeros = np.zeros(img2.shape, dtype=np.uint8)
-                    mask = cv2.fillPoly(zeros, contours, color=(int(color[0]), int(color[1]), int(color[2])
-                                                                ), lineType=cv2.LINE_AA)
-                    img2 += 0.5 * mask
+                    if "masks" in res_id:
+                        contours, hierarchy = cv2.findContours(masks[i, 0, :, :],
+                                                               cv2.RETR_CCOMP,
+                                                               cv2.CHAIN_APPROX_NONE)
+                        zeros = np.zeros(img2.shape, dtype=np.uint8)
+                        mask = cv2.fillPoly(zeros, contours, color=(int(color[0]), int(color[1]), int(color[2])
+                                                                    ), lineType=cv2.LINE_AA)
+                        img2 += 0.5 * mask
+                        cv2.polylines(img2, contours, isClosed=True, thickness=1, color=(255, 255, 255))
+
                     img2 = cv2.rectangle(img2, (int(x1), int(y1)), (int(x2), int(y2)),
                                          (int(color[0]), int(color[1]), int(color[2])), 1)
-                    cv2.polylines(img2, contours, isClosed=True, thickness=1, color=(255, 255, 255))
+
     cv2.imwrite(output_path, img2)
 
 

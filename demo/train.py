@@ -14,7 +14,8 @@ from utils_tool import utils
 from torch.utils.data import DataLoader
 from dataset import PennFudanDataset, get_transform,CrowAiBuildingDataset
 # from instance_detection.model import get_instance_segmentation_model
-from instance_detection.maskrcnn_pointrend import maskrcnn_resnet_fpn
+# from instance_detection.maskrcnn_pointrend import maskrcnn_resnet_fpn
+from instance_detection.fasterrcnn import get_fasterrcnn
 from utils_tool.engine import train_one_epoch,evaluate
 
 # # root dir
@@ -45,8 +46,9 @@ num_classes=2
 #mask rcnn
 # model=get_instance_segmentation_model(num_classes=num_classes)
 #mask rcnn with pointrend'
-model =maskrcnn_resnet_fpn(num_classes=num_classes,backbone_name='resnet50')
-
+# model =maskrcnn_resnet_fpn(num_classes=num_classes,backbone_name='resnet50')
+#faster rcnn
+model=get_fasterrcnn(num_classes=num_classes)
 print(model)
 
 # #move model to the right device

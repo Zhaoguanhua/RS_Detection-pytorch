@@ -144,10 +144,11 @@ class BuildingDataset(torch.utils.data.Dataset):
 
 class CrowAiBuildingDataset(torch.utils.data.Dataset):
 
-    def __init__(self,images_dir,annotation_file,transforms=None):
+    def __init__(self,images_dir,annotation_file,use_mask=False,transforms=None):
         self.images_dir=images_dir
         self.annotation_file=annotation_file
         self.transform=transforms
+        self.use_mask=use_mask
         self.coco=COCO(self.annotation_file)
         self.class_Ids=self.coco.getCatIds()
         self.image_ids=self.coco.getImgIds()
@@ -168,7 +169,7 @@ class CrowAiBuildingDataset(torch.utils.data.Dataset):
 
         for ann in anns:
 
-            mask=self.coco.annToMask(ann)
+
             seg=ann["segmentation"]
 
             x_points=seg[0][::2]
@@ -184,7 +185,9 @@ class CrowAiBuildingDataset(torch.utils.data.Dataset):
                 bbox=[x11,y11,x22,y22]
                 boxes.append(bbox)
                 labels.append(category_id)
-                masks.append(mask)
+                if self.use_mask:
+                    mask = self.coco.annToMask(ann)
+                    masks.append(mask)
 
         image_id=torch.tensor([i])
         iscrowd=torch.zeros((len(annos),),dtype=torch.int64)
@@ -193,13 +196,16 @@ class CrowAiBuildingDataset(torch.utils.data.Dataset):
         boxes=torch.as_tensor(boxes,dtype=torch.float32)
 
         labels=torch.as_tensor(labels,dtype=torch.int64)
-        masks=torch.as_tensor(masks,dtype=torch.uint8)
+
+        if self.use_mask:
+            masks=torch.as_tensor(masks,dtype=torch.uint8)
 
         area = (boxes[:, 3] - boxes[:, 1]) * (boxes[:, 2] - boxes[:, 0])
         target={}
         target["boxes"]=boxes
         target["labels"]=labels
-        target["masks"]=masks
+        if self.use_mask:
+            target["masks"]=masks
         target["image_id"]=image_id
         target["iscrowd"]=iscrowd
         target["area"] = area
