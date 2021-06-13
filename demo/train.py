@@ -16,6 +16,7 @@ from dataset import PennFudanDataset, get_transform,CrowAiBuildingDataset
 # from instance_detection.model import get_instance_segmentation_model
 # from instance_detection.maskrcnn_pointrend import maskrcnn_resnet_fpn
 from instance_detection.fasterrcnn import get_fasterrcnn
+from instance_detection.cascade_fasterrcnn import cascade_fasterrcnn_resnet50_fpn
 from utils_tool.engine import train_one_epoch,evaluate
 
 # # root dir
@@ -48,7 +49,11 @@ num_classes=2
 #mask rcnn with pointrend'
 # model =maskrcnn_resnet_fpn(num_classes=num_classes,backbone_name='resnet50')
 #faster rcnn
-model=get_fasterrcnn(num_classes=num_classes)
+# model=get_fasterrcnn(num_classes=num_classes)
+
+#cascade faster rcnn
+model=cascade_fasterrcnn_resnet50_fpn(num_classes=num_classes)
+
 print(model)
 
 # #move model to the right device
