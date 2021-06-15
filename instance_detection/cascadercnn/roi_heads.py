@@ -574,50 +574,50 @@ class CascadeRoIHeads(torch.nn.Module):
                     }
                 )
 
-        # if self.has_mask():
-        #     mask_proposals = [p["boxes"] for p in result]
-        #     if self.training:
-        #         assert matched_idxs is not None
-        #         # during training, only focus on positive boxes
-        #         num_images = len(proposals)
-        #         mask_proposals = []
-        #         pos_matched_idxs = []
-        #         for img_id in range(num_images):
-        #             pos = torch.where(labels[img_id] > 0)[0]
-        #             mask_proposals.append(proposals[img_id][pos])
-        #             pos_matched_idxs.append(matched_idxs[img_id][pos])
-        #     else:
-        #         pos_matched_idxs = None
-        #
-        #     if self.mask_roi_pool is not None:
-        #         mask_features = self.mask_roi_pool(features, mask_proposals, image_shapes)
-        #         mask_features = self.mask_head(mask_features)
-        #         mask_logits = self.mask_predictor(mask_features)
-        #     else:
-        #         mask_logits = torch.tensor(0)
-        #         raise Exception("Expected mask_roi_pool to be not None")
-        #
-        #     loss_mask = {}
-        #     if self.training:
-        #         assert targets is not None
-        #         assert pos_matched_idxs is not None
-        #         assert mask_logits is not None
-        #
-        #         gt_masks = [t["masks"] for t in targets]
-        #         gt_labels = [t["labels"] for t in targets]
-        #         rcnn_loss_mask = maskrcnn_loss(
-        #             mask_logits, mask_proposals,
-        #             gt_masks, gt_labels, pos_matched_idxs)
-        #         loss_mask = {
-        #             "loss_mask": rcnn_loss_mask
-        #         }
-        #     else:
-        #         labels = [r["labels"] for r in result]
-        #         masks_probs = maskrcnn_inference(mask_logits, labels)
-        #         for mask_prob, r in zip(masks_probs, result):
-        #             r["masks"] = mask_prob
-        #
-        #     losses.update(loss_mask)
+        if self.has_mask():
+            mask_proposals = [p["boxes"] for p in result]
+            if self.training:
+                assert matched_idxs is not None
+                # during training, only focus on positive boxes
+                num_images = len(proposals)
+                mask_proposals = []
+                pos_matched_idxs = []
+                for img_id in range(num_images):
+                    pos = torch.where(labels[img_id] > 0)[0]
+                    mask_proposals.append(proposals[img_id][pos])
+                    pos_matched_idxs.append(matched_idxs[img_id][pos])
+            else:
+                pos_matched_idxs = None
+
+            if self.mask_roi_pool is not None:
+                mask_features = self.mask_roi_pool(features, mask_proposals, image_shapes)
+                mask_features = self.mask_head(mask_features)
+                mask_logits = self.mask_predictor(mask_features)
+            else:
+                mask_logits = torch.tensor(0)
+                raise Exception("Expected mask_roi_pool to be not None")
+
+            loss_mask = {}
+            if self.training:
+                assert targets is not None
+                assert pos_matched_idxs is not None
+                assert mask_logits is not None
+
+                gt_masks = [t["masks"] for t in targets]
+                gt_labels = [t["labels"] for t in targets]
+                rcnn_loss_mask = maskrcnn_loss(
+                    mask_logits, mask_proposals,
+                    gt_masks, gt_labels, pos_matched_idxs)
+                loss_mask = {
+                    "loss_mask": rcnn_loss_mask
+                }
+            else:
+                labels = [r["labels"] for r in result]
+                masks_probs = maskrcnn_inference(mask_logits, labels)
+                for mask_prob, r in zip(masks_probs, result):
+                    r["masks"] = mask_prob
+
+            losses.update(loss_mask)
 
         return result, losses
 

@@ -53,16 +53,23 @@ def train_one_epoch(model, optimizer, data_loader, device, epoch, print_freq):
         metric_logger.update(lr=optimizer.param_groups[0]["lr"])
 
 
-def _get_iou_types(model):
-    model_without_ddp = model
-    if isinstance(model, torch.nn.parallel.DistributedDataParallel):
-        model_without_ddp = model.module
-    iou_types = ["bbox"]
-    # if isinstance(model_without_ddp, torchvision.models.detection.MaskRCNN):
-    iou_types.append("segm")
+# def _get_iou_types(model):
+#     model_without_ddp = model
+#     if isinstance(model, torch.nn.parallel.DistributedDataParallel):
+#         model_without_ddp = model.module
+#     iou_types = ["bbox"]
+#     # if isinstance(model_without_ddp, torchvision.models.detection.MaskRCNN):
+#     iou_types.append("segm")
+#
+#     if isinstance(model_without_ddp, torchvision.models.detection.KeypointRCNN):
+#         iou_types.append("keypoints")
+#     return iou_types
 
-    if isinstance(model_without_ddp, torchvision.models.detection.KeypointRCNN):
-        iou_types.append("keypoints")
+def get_iou_types(model):
+    model_name=model.__class__.__name__
+    iou_types=["bbox"]
+    if "MaskRCNN" in model_name:
+        iou_types.append("segm")
     return iou_types
 
 
