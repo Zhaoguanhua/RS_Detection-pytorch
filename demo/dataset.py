@@ -219,6 +219,84 @@ class CrowAiBuildingDataset(torch.utils.data.Dataset):
         return len(self.coco.getImgIds())
 
 
+class DatasetFromSemantic(torch.utils.data.Dataset):
+    """
+    将语义分割的标签转换为mask rcnn网络需要的格式
+    """
+    def __init__(self,image_dir,labels_dir,classes,transform=None):
+        super(DatasetFromSemantic, self).__init__()
+        self.image_dir=image_dir
+        self.labels_dir=labels_dir
+        self.images=os.listdir(image_dir)
+        self.transform=transform
+        self.classes=classes
+
+    def __getitem__(self, i):
+
+        image_name=os.path.basename(self.images[i])
+        image_array=cv2.imread(os.path.join(self.image_dir,image_name))
+        image_array=cv2.cvtColor(image_array,cv2.COLOR_BGR2RGB)
+
+        mask_array=cv2.imread(os.path.join(image_array,cv2.COLOR_BGR2RGB))
+
+        kernel = np.ones((5,5),np.uint8)
+        mask_array=cv2.morphologyEx(mask_array,cv2.MORPH_OPEN, kernel)
+
+        boxes=[]
+        labels=[]
+        masks=[]
+
+        #将mask转换为mask rcnn网络输入的格式
+        target_num=0
+        for class_i in range(1,self.classes):      #逐类别转换
+            mask_i =(mask_array==class_i).astype("uint8")
+            if np.max(mask_i)!=0:
+                contours, hierarchy = cv2.findContours(mask_i,
+                                                       cv2.RETR_CCOMP,
+                                                       cv2.CHAIN_APPROX_NONE)
+
+                for contour in contours:
+                    if contour.shape[0]>10:
+                        contour=contour.squeeze()
+                        maxx,maxy=np.max(contour,axis=0)
+                        minx,miny=np.min(contour,axis=0)
+
+                        if ((maxx-minx)*(maxy-miny))>5:
+                            mask_i_j=np.zeros(image_array.shape,np.uint8)
+                            cv2.fillConvexPoly(mask_i_j,contour,(1,1,1))
+                            masks.append(mask_i_j[:,:,0])
+                            boxes.append([minx,miny,maxx,maxy])
+                            labels.append(class_i)
+                            target_num+=1
+
+
+        image_id=torch.tensor([i])
+        iscrowd=torch.zeros((target_num,),dtype=torch.int64)
+        #
+        # print(boxes)
+        boxes=torch.as_tensor(boxes,dtype=torch.float32)
+        labels=torch.as_tensor(labels,dtype=torch.int64)
+        masks=torch.as_tensor(masks,dtype=torch.uint8)
+
+        area = (boxes[:, 3] - boxes[:, 1]) * (boxes[:, 2] - boxes[:, 0])
+        target={}
+        target["boxes"]=boxes
+        target["labels"]=labels
+        target["masks"]=masks
+        target["image_id"]=image_id
+        target["iscrowd"]=iscrowd
+        target["area"] = area
+
+        if  self.transform is not None:
+            image_array,target=self.transform(image_array,target)
+
+        return image_array,target
+
+
+    def __len__(self):
+        return len(self.images)
+
+
 def get_transform(train):
     transforms=[]
 
